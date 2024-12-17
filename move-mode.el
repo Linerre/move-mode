@@ -474,7 +474,8 @@ Invokes `move-bin' with `move-default-arguments' SUB-COMMAND, and ARGS."
           (locate-dominating-file default-directory "Move.toml")))
     (compilation-start
      (combine-and-quote-strings
-      (append (list move-bin sub-command)
+      (append (split-string-and-unquote move-bin)
+              (list sub-command)
               (split-string-and-unquote move-default-arguments)
               args))
      'move-compilation-mode)))
