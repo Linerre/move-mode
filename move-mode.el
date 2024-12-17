@@ -559,6 +559,24 @@ character, and NIL otherwise with the point at an indeterminate position."
        (or (not (move--ppss-in-comment))
            (move--next-terminator bound))))
 
+(defun move--in-match-block ()
+  "Determine if point is inside a match block.
+This checks parent blocks until it finds a match block or runs out of parents."
+  (save-excursion
+    (let ((orig-pos (point))
+          (parent-pos (move--ppss-inner-paren))
+          (found nil))
+      ;; FIXME: may have performance issue with deeply nested match blocks
+      (while (and parent-pos (not found))
+        (goto-char parent-pos)
+        (beginning-of-line)
+        ;; If we find "match" before the brace, we're in a match block
+        (if (search-forward "match" (line-end-position) t)
+            (setq found t)
+          ;; Otherwise check next parent up
+          (setq parent-pos (move--ppss-inner-paren))))
+      found)))
+
 (defun move--indent-column ()
   "Calculates the column to indent the current line to.
 
@@ -591,6 +609,14 @@ offset."
        ;; Closing parentheses
        ((looking-at "[]})]")
         (- default-indent move-indent-offset))
+
+        ;; Match arms and their content
+       ((move--in-match-block)
+        (if (save-excursion
+              (beginning-of-line)
+              (search-forward "=>" (line-end-position) t))
+            default-indent  ; For the match arm itself
+          (+ default-indent move-indent-offset)))  ; For content inside arm blocks
 
        ;; Assignment continuation lines
        ((save-excursion
