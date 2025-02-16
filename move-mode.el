@@ -353,11 +353,11 @@ Generic type parameters are enclosed by type parameters.")
     (,move-type-re                             . font-lock-type-face)
 
     ;; Module components
-    (,(concat "\\(" move-ident-re "\\)::")     1 font-lock-constant-face)
+    ;; (,(concat "\\(" move-ident-re "\\)::")     1 font-lock-constant-face)
 
     ;; Fields, function params, local variables with explicit types
-    (,(concat "\\(" move-ident-re "\\)\\s-*:[^:]")
-     1 font-lock-variable-name-face)
+    ;; (,(concat "\\(" move-ident-re "\\)\\s-*:[^:]")
+    ;;  1 font-lock-variable-name-face)
 
     ;; Block labels
     (,(concat "'\\(" move-ident-re "\\)\\_>")
@@ -658,10 +658,23 @@ offset."
 
         ;; Match arms and their content
        ((move--in-match-block)
-        (if (save-excursion
-              (beginning-of-line)
-              (search-forward "=>" (line-end-position) t))
-            default-indent  ; For the match arm itself
+        (if (or (save-excursion
+                  (back-to-indentation)
+                  (search-forward "=>" (line-end-position) t))
+                ;; Check if we're on the line right after the opening brace
+                (save-excursion
+                  (back-to-indentation)
+                  (eq (move--ppss-inner-paren)
+                      (save-excursion
+                        (forward-line -1)
+                        (end-of-line)
+                        (re-search-backward "{" (line-beginning-position) t))))
+                ;; Check if we're on a line that should be a new arm
+                (save-excursion
+                  (forward-line -1)
+                  (end-of-line)
+                  (looking-back "," (- (point) 1))))
+            default-indent  ; For match arms and lines after opening brace
           (+ default-indent move-indent-offset)))  ; For content inside arm blocks
 
        ;; Assignment continuation lines
