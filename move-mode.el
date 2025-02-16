@@ -17,7 +17,6 @@
 
 ;;; Code:
 
-
 
 (require 'compile)
 (require 'cl-lib)
@@ -137,6 +136,50 @@ Inherits from `default' face to avoid interfering with the ANSI colour filter."
 
 For use in detecting generic paramters.")
 
+(defvar move-re-vis "public")
+(defvar move-re-entry "entry")
+(defvar move-re-struct-modifiers "\\(?:has\\s+\\(?:copy\\|drop\\|store\\|key\\)\\(?:,\\s*\\(?:copy\\|drop\\|store\\|key\\)\\)*\\)?")
+
+(defun move-re-item-def-imenu (itype)
+  (concat "^[[:space:]]*"
+          ;; Optional public modifier
+          "\\(?:public[[:space:]]+\\)?"
+          ;; The item type (struct, enum)
+          (regexp-quote itype) "[[:space:]]+"
+          ;; Capture the name
+          "\\([[:word:]_]+\\)"
+          ;; For structs, match optional generic parameters
+          (when (string= itype "struct")
+            "\\(?:<[^>]+>\\)?")
+          ;; For structs/enums, match optional modifiers
+          (when (or (string= itype "struct") (string= itype "enum"))
+            (concat "[[:space:]]+" move-re-struct-modifiers))))
+
+;; For functions, capture the entire name including underscores
+(defun move-re-function-def-imenu ()
+  (concat "^[[:space:]]*"
+          ;; Optional public modifier
+          "\\(?:public[[:space:]]+\\)?"
+          ;; Optional entry modifier
+          "\\(?:entry[[:space:]]+\\)?"
+          ;; The function keyword
+          "fun[[:space:]]+"
+          ;; Capture the complete function name (including underscores)
+          "\\([[:word:]_]+\\)"))
+
+(defvar move-imenu-generic-expression
+  (append (mapcar #'(lambda (x)
+                      (list (capitalize x) (move-re-item-def-imenu x) 1))
+                  '("struct" "enum" "const"))
+          ;; Functions with special handling
+          `(("Function" ,(move-re-function-def-imenu) 1))
+          ;; Add module pattern specifically for Move's module syntax
+          `(("Module"
+             ,(concat "^[[:space:]]*module[[:space:]]+"
+                      "\\([[:word:]_]+::[[:word:]_]+\\)"
+                      "\\(?:[[:space:]]*[{;]\\)")
+             1))))
+
 ;;; Keybindings ============================================================ ;;;
 
 (defvar move-mode-map
@@ -201,6 +244,9 @@ For use in detecting generic paramters.")
   (setq-local electric-indent-chars
               (cons ?} (and (boundp 'electric-indent-chars)
                             electric-indent-chars)))
+
+  ;; Imenu
+  (setq-local imenu-generic-expression move-imenu-generic-expression)
 
   ;; Comments
   (setq-local comment-end        "")
