@@ -1,6 +1,7 @@
 ;;; move-mode.el --- A major-mode for editing Move language -*- lexical-binding: t; -*-
 
 ;; Copyright (c) 2022 Ashok Menon
+;; Copyright (c) 2025 Errenil Noel
 
 ;; Author: Ashok Menon
 ;; URL: https://github.com/amnn/move-mode
